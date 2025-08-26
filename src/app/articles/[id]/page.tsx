@@ -38,6 +38,12 @@ const ArticleDetailPage = () => {
 
   // 获取文章详情
   const fetchArticle = useCallback(async () => {
+    if (!params?.id) {
+      setError('文章ID不存在')
+      setLoading(false)
+      return
+    }
+    
     try {
       setLoading(true)
       const response = await fetch(`/api/articles/${params.id}`)
@@ -55,13 +61,13 @@ const ArticleDetailPage = () => {
     } finally {
       setLoading(false)
     }
-  }, [params.id])
+  }, [params?.id])
 
   useEffect(() => {
-    if (params.id) {
+    if (params?.id) {
       fetchArticle()
     }
-  }, [fetchArticle, params.id])
+  }, [fetchArticle, params?.id])
 
   if (loading) {
     return (
