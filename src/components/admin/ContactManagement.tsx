@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { Edit, Trash2 } from 'lucide-react'
+import Pagination from './common/Pagination'
 
 interface Contact {
   id: number
@@ -396,19 +398,23 @@ export default function ContactManagement() {
                         <span className="text-gray-400">未处理</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => startEdit(contact)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => deleteContact(contact.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        删除
-                      </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        <button
+                          onClick={() => startEdit(contact)}
+                          className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors"
+                          title="编辑联系记录"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteContact(contact.id)}
+                          className="text-red-600 hover:text-red-900 p-1 rounded transition-colors"
+                          title="删除联系记录"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -419,41 +425,21 @@ export default function ContactManagement() {
       </div>
 
       {/* 分页 */}
-      {pagination.pages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            显示第 {(pagination.page - 1) * pagination.limit + 1} 到 {Math.min(pagination.page * pagination.limit, pagination.total)} 条，共 {pagination.total} 条记录
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              上一页
-            </button>
-            {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`px-3 py-2 border rounded-md text-sm font-medium ${
-                  page === pagination.page
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.pages}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              下一页
-            </button>
-          </div>
-        </div>
+      {contacts.length > 0 && (
+        <Pagination
+          pagination={{
+            currentPage: pagination.page,
+            totalPages: pagination.pages,
+            pageSize: pagination.limit,
+            total: pagination.total
+          }}
+          onPageChange={handlePageChange}
+          onPageSizeChange={(pageSize) => {
+            setPagination(prev => ({ ...prev, limit: pageSize, page: 1 }))
+          }}
+          showQuickJumper={true}
+          showSizeChanger={true}
+        />
       )}
 
       {/* 编辑模态框 */}
