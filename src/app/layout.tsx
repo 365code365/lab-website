@@ -1,3 +1,4 @@
+import '@/lib/antd-patch';
 import type { Metadata } from "next";
 import "./globals.css";
 import "@/styles/modal.css";

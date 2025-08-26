@@ -196,6 +196,7 @@ model Article {
   // 关联关系
   creator        User?    @relation("ArticleCreatedBy", fields: [createdBy], references: [id])
   updater        User?    @relation("ArticleUpdatedBy", fields: [updatedBy], references: [id])
+  documentArticles DocumentArticle[] @relation("DocumentArticleToArticle")
 
   @@map("articles")
 }
@@ -234,6 +235,8 @@ model User {
   createdFooters      Footer[]      @relation("FooterCreatedBy")
   updatedFooters      Footer[]      @relation("FooterUpdatedBy")
   processedContacts   Contact[]     @relation("ContactProcessedBy")
+  createdDocuments    Document[]    @relation("DocumentCreatedBy")
+  updatedDocuments    Document[]    @relation("DocumentUpdatedBy")
 
   @@map("users")
 }
@@ -281,4 +284,47 @@ model Contact {
   processor User?    @relation("ContactProcessedBy", fields: [processedBy], references: [id])
 
   @@map("contacts")
+}
+
+// 文档管理
+model Document {
+  id          Int      @id @default(autoincrement())
+  filename    String   // 原始文件名
+  originalName String  // 用户上传时的文件名
+  fileSize    Int      // 文件大小（字节）
+  mimeType    String   // 文件类型
+  filePath    String   // 文件存储路径
+  content     String?  @db.LongText // 解析后的文档内容
+  articleCount Int     @default(0) // 解析出的文章数量
+  status      String   @default("uploaded") // 状态：uploaded, parsing, parsed, failed
+  parseError  String?  @db.Text // 解析错误信息
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   Int?     // 创建人
+  updatedBy   Int?     // 修改人
+  
+  // 关联关系
+  creator     User?    @relation("DocumentCreatedBy", fields: [createdBy], references: [id])
+  updater     User?    @relation("DocumentUpdatedBy", fields: [updatedBy], references: [id])
+  articles    DocumentArticle[] // 解析出的文章
+
+  @@map("documents")
+}
+
+// 文档解析出的文章
+model DocumentArticle {
+  id         Int      @id @default(autoincrement())
+  documentId Int      // 所属文档ID
+  content    String   @db.Text // 文章内容
+  order      Int      // 在文档中的顺序
+  isImported Boolean  @default(false) // 是否已导入到Article表
+  articleId  Int?     // 导入后的Article ID
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // 关联关系
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  article    Article? @relation("DocumentArticleToArticle", fields: [articleId], references: [id])
+
+  @@map("document_articles")
 }

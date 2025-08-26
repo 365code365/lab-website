@@ -226,7 +226,76 @@ const ArticleDetailPage = () => {
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">摘要</h2>
             <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {article.abstract}
+              {(() => {
+                try {
+                  const parsedData = JSON.parse(article.abstract)
+                  if (parsedData.type === 'academic_paper' && parsedData.parsedInfo) {
+                    const info = parsedData.parsedInfo
+                    return (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <span className="font-semibold text-gray-900">标题：</span>
+                            <span className="text-gray-700">{info.title || '未知'}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-gray-900">作者：</span>
+                            <span className="text-gray-700">{info.authors || '未知'}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-gray-900">期刊：</span>
+                            <span className="text-gray-700">{info.journal || '未知'}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-gray-900">发表年份：</span>
+                            <span className="text-gray-700">{info.publishedDate || '未知'}</span>
+                          </div>
+                          {info.volume && (
+                            <div>
+                              <span className="font-semibold text-gray-900">卷号：</span>
+                              <span className="text-gray-700">{info.volume}</span>
+                            </div>
+                          )}
+                          {info.issue && (
+                            <div>
+                              <span className="font-semibold text-gray-900">期号：</span>
+                              <span className="text-gray-700">{info.issue}</span>
+                            </div>
+                          )}
+                          {info.pages && (
+                            <div>
+                              <span className="font-semibold text-gray-900">页码：</span>
+                              <span className="text-gray-700">{info.pages}</span>
+                            </div>
+                          )}
+                          {info.doi && (
+                            <div>
+                              <span className="font-semibold text-gray-900">DOI：</span>
+                              <a 
+                                href={`https://doi.org/${info.doi}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 underline"
+                              >
+                                {info.doi}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                        {parsedData.originalContent && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <span className="font-semibold text-gray-900">原始内容：</span>
+                            <div className="mt-2 text-gray-700">{parsedData.originalContent}</div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+                } catch (e) {
+                  // 如果不是JSON格式，显示原始内容
+                }
+                return article.abstract
+              })()} 
             </div>
           </div>
         )}

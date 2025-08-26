@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Trophy, FileText, Plus, Upload, Download, Filter } from 'lucide-react'
+import { Trophy, FileText, Plus, Upload, Download, Filter, File } from 'lucide-react'
 import type { Article, Award } from '@/types/admin'
 import ArticlesTable from '../tables/ArticlesTable'
 import ArticleForm from '../forms/ArticleForm'
@@ -9,6 +9,8 @@ import SearchBar from '../common/SearchBar'
 import LoadingSpinner from '../common/LoadingSpinner'
 import ErrorBoundary from '../common/ErrorBoundary'
 import AwardManagement from '../team/AwardManagement'
+import DocumentUpload from '../DocumentUpload'
+import DocumentPreview from '../DocumentPreview'
 import { usePagination } from '@/hooks/usePagination'
 import { useAdminData } from '@/hooks/useAdminData'
 
@@ -16,7 +18,7 @@ interface AchievementsTabProps {
   className?: string
 }
 
-type TabType = 'articles' | 'awards'
+type TabType = 'articles' | 'awards' | 'documents'
 
 const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => {
   const {
@@ -34,6 +36,10 @@ const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => 
 
   // 当前活跃标签
   const [activeTab, setActiveTab] = useState<TabType>('articles')
+
+  // 文档管理状态
+  const [documents, setDocuments] = useState<any[]>([])
+  const [documentsLoading, setDocumentsLoading] = useState(false)
 
   // 文章分页
   const {
@@ -144,6 +150,119 @@ const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab)
     setSelectedArticles([])
+    
+    if (tab === 'documents') {
+      fetchDocuments()
+    }
+  }
+
+  // 获取文档列表
+  const fetchDocuments = async () => {
+    setDocumentsLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/documents', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setDocuments(result.data || [])
+      }
+    } catch (error) {
+      console.error('获取文档列表失败:', error)
+    } finally {
+      setDocumentsLoading(false)
+    }
+  }
+
+  // 文档上传成功处理
+  const handleDocumentUploadSuccess = (document: any) => {
+    setDocuments(prev => [document, ...prev])
+    // 定期检查解析状态
+    const checkInterval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/documents?id=${document.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          const updatedDoc = result.data.find((d: any) => d.id === document.id)
+          if (updatedDoc && updatedDoc.status !== 'parsing') {
+            setDocuments(prev => prev.map(d => d.id === document.id ? updatedDoc : d))
+            clearInterval(checkInterval)
+          }
+        }
+      } catch (error) {
+        console.error('检查文档状态失败:', error)
+        clearInterval(checkInterval)
+      }
+    }, 2000)
+    
+    // 30秒后停止检查
+    setTimeout(() => clearInterval(checkInterval), 30000)
+  }
+
+  // 文档上传失败处理
+  const handleDocumentUploadError = (error: string) => {
+    console.error('文档上传失败:', error)
+  }
+
+  // 删除文档
+  const handleDeleteDocument = async (documentId: number) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('请先登录')
+        return
+      }
+
+      const response = await fetch(`/api/documents?id=${documentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        setDocuments(prev => prev.filter(d => d.id !== documentId))
+        alert('文档删除成功')
+      } else {
+        alert(result.error || '删除文档失败')
+      }
+    } catch (error) {
+      console.error('删除文档失败:', error)
+      alert('删除文档失败，请重试')
+    }
+  }
+
+  // 导入文章
+  const handleImportArticles = async (documentId: number, articleIds: number[]) => {
+    const token = localStorage.getItem('token')
+    const response = await fetch('/api/documents/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ documentId, articleIds })
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || '导入失败')
+    }
+    
+    // 刷新文档列表
+    await fetchDocuments()
   }
 
   // 文章相关处理函数
@@ -270,6 +389,17 @@ const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => 
               <Trophy className="w-4 h-4 inline-block mr-2" />
               获奖管理
             </button>
+            <button
+              onClick={() => handleTabChange('documents')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'documents'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <File className="w-4 h-4 inline-block mr-2" />
+              文档管理
+            </button>
           </nav>
         </div>
 
@@ -366,12 +496,35 @@ const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => 
               onPageChange={(page) => handlePageChange('articles', page)}
               onPageSizeChange={(size) => handlePageSizeChange('articles', size)}
             />
-          ) : (
+          ) : activeTab === 'awards' ? (
             <AwardManagement
               awards={awards || []}
               loading={loading}
               onDataRefresh={fetchAwards}
             />
+          ) : (
+            <div className="p-6">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">上传文档</h3>
+                  <DocumentUpload
+                    onUploadSuccess={handleDocumentUploadSuccess}
+                    onUploadError={handleDocumentUploadError}
+                  />
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">文档列表</h3>
+                  <DocumentPreview
+                    documents={documents}
+                    loading={documentsLoading}
+                    onRefresh={fetchDocuments}
+                    onDelete={handleDeleteDocument}
+                    onImportArticles={handleImportArticles}
+                  />
+                </div>
+              </div>
+            </div>
           )}
         </div>
 

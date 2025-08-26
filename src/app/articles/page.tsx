@@ -253,9 +253,28 @@ const ArticlesPage = () => {
                   )}
                   
                   {article.abstract && (
-                    <p className="text-gray-600 text-sm line-clamp-3">
-                      <span className="font-medium">摘要：</span>{article.abstract}
-                    </p>
+                    <div className="text-gray-600 text-sm line-clamp-3">
+                      <span className="font-medium">摘要：</span>
+                      {(() => {
+                        try {
+                          const parsedData = JSON.parse(article.abstract)
+                          if (parsedData.type === 'academic_paper' && parsedData.parsedInfo) {
+                            const info = parsedData.parsedInfo
+                            return (
+                              <span>
+                                {info.title && `标题: ${info.title}. `}
+                                {info.authors && `作者: ${info.authors}. `}
+                                {info.journal && `期刊: ${info.journal}. `}
+                                {info.publishedDate && `年份: ${info.publishedDate}.`}
+                              </span>
+                            )
+                          }
+                        } catch (e) {
+                          // 如果不是JSON格式，显示原始内容
+                        }
+                        return article.abstract
+                      })()} 
+                    </div>
                   )}
                   
                   <div className="flex items-center justify-between mt-4">
