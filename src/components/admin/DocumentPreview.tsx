@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Table, Button, message, Modal, Tag, Space, Tooltip, Card, Typography, Checkbox, Divider } from 'antd'
 import { EyeOutlined, ImportOutlined, DeleteOutlined, FileWordOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import { DeleteConfirmModal } from './modals/ConfirmModal'
 
 const { Text, Paragraph } = Typography
 
@@ -45,6 +46,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   onDelete,
   onImportArticles
 }) => {
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingDocument, setDeletingDocument] = useState<Document | null>(null)
   const [previewVisible, setPreviewVisible] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [selectedArticleIds, setSelectedArticleIds] = useState<number[]>([])
@@ -203,11 +206,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
             danger
             icon={<DeleteOutlined />}
             onClick={() => {
-              Modal.confirm({
-                title: '确认删除',
-                content: `确定要删除文档 "${record.originalName}" 吗？此操作不可恢复。`,
-                onOk: () => onDelete(record.id)
-              })
+              setDeletingDocument(record)
+              setShowDeleteModal(true)
             }}
           >
             删除
@@ -367,6 +367,21 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
           </div>
         )}
       </Modal>
+
+      {/* 删除确认模态框 */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setDeletingDocument(null)
+        }}
+        onConfirm={() => {
+          if (deletingDocument) {
+            onDelete(deletingDocument.id)
+          }
+        }}
+        itemName={`文档 "${deletingDocument?.originalName}"`}
+      />
     </div>
   )
 }
