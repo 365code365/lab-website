@@ -40,12 +40,12 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight text-center">
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 智能化药物研发
               </span>
               <br />
-              <span className="text-white text-4xl md:text-5xl">创新实验室</span>
+              <span className="text-white text-3xl md:text-4xl lg:text-5xl">创新实验室</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
               融合人工智能、计算生物学与分子设计技术，

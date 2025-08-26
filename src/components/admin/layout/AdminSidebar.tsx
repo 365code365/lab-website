@@ -90,21 +90,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       id: 'achievements',
       label: '成果管理',
       icon: Trophy,
-      badge: '',
-      children: [
-        {
-          id: 'articles',
-          label: '文章',
-          icon: BookOpen,
-          badge: ''
-        },
-        {
-          id: 'awards',
-          label: '获奖',
-          icon: Award,
-          badge: ''
-        }
-      ]
+      badge: ''
     },
 
     {

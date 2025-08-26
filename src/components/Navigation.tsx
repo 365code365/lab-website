@@ -32,14 +32,16 @@ const Navigation = () => {
           </div>
 
           {/* Desktop Navigation - centered */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-2">
             {navItems.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
+                className="relative text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-all duration-300 ease-in-out rounded-lg group hover:bg-blue-50 hover:shadow-md transform hover:scale-105 hover:-translate-y-0.5"
               >
-                {item.name}
+                <span className="relative z-10">{item.name}</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300 ease-out"></div>
               </Link>
             ))}
           </div>
@@ -48,9 +50,12 @@ const Navigation = () => {
           <div className="absolute right-0 md:hidden flex items-center">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600"
+              className="relative text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 p-2 rounded-lg transition-all duration-300 ease-in-out hover:bg-blue-50 hover:shadow-md transform hover:scale-110 group"
             >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+              <div className="relative z-10 transition-transform duration-300 group-hover:rotate-180">
+                {isOpen ? <X size={24} /> : <Menu size={24} />}
+              </div>
             </button>
           </div>
         </div>
@@ -63,10 +68,12 @@ const Navigation = () => {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium transition-colors"
+                  className="relative text-gray-700 hover:text-blue-600 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-300 ease-in-out hover:bg-blue-50 hover:shadow-md transform hover:scale-105 hover:translate-x-2 group"
                   onClick={() => setIsOpen(false)}
                 >
-                  {item.name}
+                  <span className="relative z-10">{item.name}</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-0 h-6 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-1 transition-all duration-300 ease-out rounded-r"></div>
                 </Link>
               ))}
             </div>

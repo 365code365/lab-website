@@ -216,13 +216,16 @@ const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => 
 
   // 删除文档
   const handleDeleteDocument = async (documentId: number) => {
+    console.log('开始删除文档，ID:', documentId)
     try {
       const token = localStorage.getItem('token')
+      console.log('获取到的token:', token ? '存在' : '不存在')
       if (!token) {
         alert('请先登录')
         return
       }
 
+      console.log('发送删除请求到:', `/api/documents?id=${documentId}`)
       const response = await fetch(`/api/documents?id=${documentId}`, {
         method: 'DELETE',
         headers: {
@@ -230,12 +233,15 @@ const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => 
         }
       })
       
+      console.log('响应状态:', response.status)
       const result = await response.json()
+      console.log('响应结果:', result)
       
       if (response.ok) {
         setDocuments(prev => prev.filter(d => d.id !== documentId))
         alert('文档删除成功')
       } else {
+        console.error('删除失败:', result.error)
         alert(result.error || '删除文档失败')
       }
     } catch (error) {
@@ -366,7 +372,7 @@ const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => 
       <div className={`space-y-6 ${className}`}>
         {/* 标签导航 */}
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-12">
             <button
               onClick={() => handleTabChange('articles')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -398,7 +404,7 @@ const AchievementsTab: React.FC<AchievementsTabProps> = ({ className = '' }) => 
               }`}
             >
               <File className="w-4 h-4 inline-block mr-2" />
-              文档管理
+              导入文档管理
             </button>
           </nav>
         </div>
