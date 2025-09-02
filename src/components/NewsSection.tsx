@@ -23,25 +23,94 @@ export default function NewsSection() {
   const [rotationAngle, setRotationAngle] = useState(0)
   const [isAutoRotating, setIsAutoRotating] = useState(true)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const [displayMode, setDisplayMode] = useState<'3d' | 'horizontal'>('horizontal')
+  const [rotationMode, setRotationMode] = useState<'continuous' | 'smooth'>('continuous')
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
+  const [scrollPosition, setScrollPosition] = useState(0)
 
   useEffect(() => {
     fetchNews()
   }, [])
 
-  // 环形3D自动旋转效果
+  // 自动播放效果（支持3D和水平滚动模式）
   useEffect(() => {
     if (!isAutoRotating || news.length <= 1) return
 
     const interval = setInterval(() => {
-      setRotationAngle(prev => prev + 0.5) // 每次旋转0.5度，更平滑
-    }, 50) // 每50毫秒更新一次，创造连续旋转效果
+      if (displayMode === '3d') {
+        if (rotationMode === 'continuous') {
+          // 3D连续旋转模式：每次旋转0.5度
+          setRotationAngle(prev => prev + 0.5)
+        } else {
+          // 3D平滑切换模式：每3秒切换到下一个
+          setCurrentSlideIndex(prev => (prev + 1) % Math.max(news.length, 3))
+        }
+      } else {
+        // 水平滚动模式：每3秒滚动到下一个
+        setCurrentSlideIndex(prev => (prev + 1) % news.length)
+      }
+    }, displayMode === '3d' && rotationMode === 'continuous' ? 50 : 3000)
 
     return () => clearInterval(interval)
-  }, [news.length, isAutoRotating])
+  }, [news.length, isAutoRotating, displayMode, rotationMode])
+
+  // 3D平滑切换模式下的角度计算
+  useEffect(() => {
+    if (displayMode === '3d' && rotationMode === 'smooth') {
+      const totalCards = Math.max(news.length, 3)
+      const targetAngle = -(currentSlideIndex * (360 / totalCards))
+      setRotationAngle(targetAngle)
+    }
+  }, [currentSlideIndex, displayMode, rotationMode, news.length])
+
+  // 水平滚动模式下的滚动位置计算
+  useEffect(() => {
+    if (displayMode === 'horizontal') {
+      const cardWidth = 320 // w-80 = 320px
+      const gap = 24 // gap-6 = 24px
+      const targetPosition = currentSlideIndex * (cardWidth + gap)
+      setScrollPosition(targetPosition)
+    }
+  }, [currentSlideIndex, displayMode])
 
   // 暂停/恢复旋转
   const toggleRotation = () => {
     setIsAutoRotating(!isAutoRotating)
+  }
+
+  // 切换显示模式（3D / 水平滚动）
+  const toggleDisplayMode = () => {
+    setDisplayMode(prev => prev === '3d' ? 'horizontal' : '3d')
+    // 切换模式时重置到第一个位置
+    setCurrentSlideIndex(0)
+    setRotationAngle(0)
+    setScrollPosition(0)
+  }
+
+  // 切换3D旋转模式（仅在3D模式下有效）
+  const toggleRotationMode = () => {
+    if (displayMode === '3d') {
+      setRotationMode(prev => prev === 'continuous' ? 'smooth' : 'continuous')
+      // 切换到平滑模式时，重置到当前最接近的位置
+      if (rotationMode === 'continuous') {
+        const totalCards = Math.max(news.length, 3)
+        const normalizedAngle = ((rotationAngle % 360) + 360) % 360
+        const nearestIndex = Math.round(normalizedAngle / (360 / totalCards)) % totalCards
+        setCurrentSlideIndex(nearestIndex)
+      }
+    }
+  }
+
+  // 手动切换到指定幻灯片
+  const goToSlide = (index: number) => {
+    if (displayMode === '3d' && rotationMode === 'continuous') {
+      return // 3D连续模式下不支持手动切换
+    }
+    
+    setCurrentSlideIndex(index)
+    setIsAutoRotating(false)
+    // 5秒后重新开始自动播放
+    setTimeout(() => setIsAutoRotating(true), 5000)
   }
 
   // 计算每个卡片的3D位置
@@ -144,13 +213,13 @@ export default function NewsSection() {
         <div className="w-72 bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
           <div className="h-40 bg-gray-200"></div>
           <div className="p-4">
-            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
-            <div className="h-3 bg-gray-200 rounded mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
+              <div className="h-3 bg-gray-200 rounded mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
           </div>
-        </div>
       </div>
     )
   }
@@ -164,92 +233,212 @@ export default function NewsSection() {
   }
 
   return (
-    <div className="relative h-[500px] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
-      {/* 环形3D旋转容器 */}
-      <div 
-        className="relative w-full h-full flex items-center justify-center"
-        style={{ perspective: '1200px' }}
-        onMouseEnter={() => setIsAutoRotating(false)}
-        onMouseLeave={() => setIsAutoRotating(true)}
-      >
+    <div className={`relative overflow-hidden bg-gradient-to-b from-gray-50 to-white ${
+      displayMode === '3d' ? 'h-[500px]' : 'h-auto py-8'
+    }`}>
+      {displayMode === '3d' ? (
+        /* 3D环形旋转容器 */
         <div 
-          className="relative w-full h-full"
-          style={{
-            transformStyle: 'preserve-3d',
-          }}
+          className="relative w-full h-full flex items-center justify-center"
+          style={{ perspective: '1200px' }}
+          onMouseEnter={() => setIsAutoRotating(false)}
+          onMouseLeave={() => setIsAutoRotating(true)}
         >
-          {/* 确保至少显示3个新闻，如果新闻不足则重复显示 */}
-          {Array.from({ length: Math.max(news.length, 3) }, (_, index) => {
-            const newsIndex = index % news.length
-            const item = news[newsIndex]
-            const cardStyle = getCardTransform(index)
-            
-            return (
+          <div 
+            className="relative w-full h-full"
+            style={{
+              transformStyle: 'preserve-3d',
+            }}
+          >
+            {/* 确保至少显示3个新闻，如果新闻不足则重复显示 */}
+            {Array.from({ length: Math.max(news.length, 3) }, (_, index) => {
+              const newsIndex = index % news.length
+              const item = news[newsIndex]
+              const cardStyle = getCardTransform(index)
+              
+              return (
+                <div
+                  key={`${item?.id || 'placeholder'}-${index}`}
+                  className={`absolute w-72 h-80 transition-all ease-out ${
+                    rotationMode === 'smooth' ? 'duration-1000' : 'duration-500'
+                  }`}
+                  style={{
+                    left: '50%',
+                    top: '50%',
+                    marginLeft: '-144px', // w-72 的一半
+                    marginTop: '-160px',  // h-80 的一半
+                    transform: cardStyle.transform,
+                    opacity: cardStyle.opacity,
+                    zIndex: cardStyle.zIndex,
+                    backfaceVisibility: 'hidden'
+                  }}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                >
+                  {item ? (
+                    <RingNewsCard 
+                      news={item} 
+                      index={index} 
+                      isHovered={hoveredIndex === index}
+                      rotationAngle={rotationAngle}
+                      totalCards={Math.max(news.length, 3)}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 rounded-2xl flex items-center justify-center">
+                      <div className="text-gray-400 text-lg">加载中...</div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : (
+        /* 水平滚动容器 */
+        <div className="relative">
+          <div 
+            className="flex gap-6 transition-transform duration-1000 ease-out px-6"
+            style={{
+              transform: `translateX(-${scrollPosition}px)`
+            }}
+            onMouseEnter={() => setIsAutoRotating(false)}
+            onMouseLeave={() => setIsAutoRotating(true)}
+          >
+      {news.map((item, index) => (
               <div
-                key={`${item?.id || 'placeholder'}-${index}`}
-                className="absolute w-72 h-80 transition-all duration-500 ease-out"
-                style={{
-                  left: '50%',
-                  top: '50%',
-                  marginLeft: '-144px', // w-72 的一半
-                  marginTop: '-160px',  // h-80 的一半
-                  transform: cardStyle.transform,
-                  opacity: cardStyle.opacity,
-                  zIndex: cardStyle.zIndex,
-                  backfaceVisibility: 'hidden'
-                }}
+                key={item.id}
+                className="flex-shrink-0 w-80"
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
               >
-                {item ? (
-                  <RingNewsCard 
-                    news={item} 
-                    index={index} 
-                    isHovered={hoveredIndex === index}
-                    rotationAngle={rotationAngle}
-                    totalCards={Math.max(news.length, 3)}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 rounded-2xl flex items-center justify-center">
-                    <div className="text-gray-400 text-lg">加载中...</div>
-                  </div>
-                )}
+                <HorizontalNewsCard 
+                  news={item} 
+                  index={index} 
+                  isActive={index === currentSlideIndex}
+                  isHovered={hoveredIndex === index}
+                />
               </div>
-            )
-          })}
+            ))}
+          </div>
+          
+          {/* 水平滚动导航箭头 */}
+          <button
+            onClick={() => goToSlide(Math.max(0, currentSlideIndex - 1))}
+            disabled={currentSlideIndex === 0}
+            className={`absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg flex items-center justify-center transition-all duration-300 ${
+              currentSlideIndex === 0 
+                ? 'text-gray-300 cursor-not-allowed' 
+                : 'text-gray-600 hover:text-blue-600 hover:shadow-xl'
+            }`}
+          >
+            ←
+          </button>
+          
+          <button
+            onClick={() => goToSlide(Math.min(news.length - 1, currentSlideIndex + 1))}
+            disabled={currentSlideIndex >= news.length - 1}
+            className={`absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg flex items-center justify-center transition-all duration-300 ${
+              currentSlideIndex >= news.length - 1 
+                ? 'text-gray-300 cursor-not-allowed' 
+                : 'text-gray-600 hover:text-blue-600 hover:shadow-xl'
+            }`}
+          >
+            →
+          </button>
         </div>
+      )}
+
+      {/* 控制按钮组 */}
+      <div className="absolute top-6 right-6 flex flex-col gap-2">
+        {/* 显示模式切换按钮 */}
+        <button
+          onClick={toggleDisplayMode}
+          className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg flex items-center justify-center text-gray-600 hover:text-blue-600 hover:bg-white hover:shadow-xl transition-all duration-300 group"
+          title={`切换到${displayMode === '3d' ? '水平滚动' : '3D环形'}模式`}
+        >
+          <div className="text-lg">
+            {displayMode === '3d' ? '📐' : '🌀'}
+          </div>
+        </button>
+        
+        {/* 3D旋转模式切换按钮（仅在3D模式下显示） */}
+        {displayMode === '3d' && (
+          <button
+            onClick={toggleRotationMode}
+            className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg flex items-center justify-center text-gray-600 hover:text-blue-600 hover:bg-white hover:shadow-xl transition-all duration-300 group"
+            title={`切换到${rotationMode === 'continuous' ? '平滑切换' : '连续旋转'}模式`}
+          >
+            <div className="text-lg">
+              {rotationMode === 'continuous' ? '🔄' : '⏭️'}
+            </div>
+          </button>
+        )}
+        
+        {/* 播放/暂停按钮 */}
+        <button
+          onClick={toggleRotation}
+          className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg flex items-center justify-center text-gray-600 hover:text-blue-600 hover:bg-white hover:shadow-xl transition-all duration-300 group"
+        >
+          <div className={`transition-transform duration-300 ${isAutoRotating && displayMode === '3d' && rotationMode === 'continuous' ? 'animate-spin' : ''}`}>
+            {isAutoRotating ? '⏸️' : '▶️'}
+          </div>
+        </button>
       </div>
 
-      {/* 旋转控制按钮 */}
-      <button
-        onClick={toggleRotation}
-        className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg flex items-center justify-center text-gray-600 hover:text-blue-600 hover:bg-white hover:shadow-xl transition-all duration-300 group"
-      >
-        <div className={`transition-transform duration-300 ${isAutoRotating ? 'animate-spin' : ''}`}>
-          {isAutoRotating ? '⏸️' : '▶️'}
-        </div>
-      </button>
-
-      {/* 环形指示器 */}
+      {/* 指示器 */}
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
-        <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-lg">
-          {Array.from({ length: Math.max(news.length, 3) }, (_, index) => {
-            const totalCards = Math.max(news.length, 3)
-            const angle = (index * (360 / totalCards) + rotationAngle) % 360
-            const normalizedAngle = ((angle % 360) + 360) % 360
-            const isCenterFront = normalizedAngle >= 345 || normalizedAngle <= 15
-            
-            return (
-              <div
-                key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  isCenterFront
-                    ? 'bg-blue-600 scale-150 shadow-lg'
-                    : 'bg-gray-300'
-                }`}
-              />
-            )
-          })}
+        <div className="flex flex-col items-center gap-2">
+          {/* 模式指示 */}
+          <div className="text-xs text-gray-500 bg-white/70 px-2 py-1 rounded-full border border-gray-200">
+            {displayMode === '3d' 
+              ? (rotationMode === 'continuous' ? '3D连续旋转' : '3D平滑切换')
+              : '水平滚动'
+            }
+          </div>
+          
+          <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-lg">
+          {displayMode === '3d' 
+            ? Array.from({ length: Math.max(news.length, 3) }, (_, index) => {
+                const totalCards = Math.max(news.length, 3)
+                
+                // 根据3D模式决定高亮逻辑
+                let isActive = false
+                if (rotationMode === 'continuous') {
+                  const angle = (index * (360 / totalCards) + rotationAngle) % 360
+                  const normalizedAngle = ((angle % 360) + 360) % 360
+                  isActive = normalizedAngle >= 345 || normalizedAngle <= 15
+                } else {
+                  isActive = index === currentSlideIndex
+                }
+                
+                return (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    disabled={displayMode === '3d' && rotationMode === 'continuous'}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      displayMode === '3d' && rotationMode === 'smooth' ? 'cursor-pointer hover:scale-125' : 'cursor-default'
+                    } ${
+                      isActive
+                        ? 'bg-blue-600 scale-150 shadow-lg'
+                        : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
+                  />
+                )
+              })
+            : news.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer hover:scale-125 ${
+                    index === currentSlideIndex
+                      ? 'bg-blue-600 scale-150 shadow-lg'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                />
+              ))
+          }
+          </div>
         </div>
       </div>
 
@@ -385,6 +574,98 @@ function RingNewsCard({ news, isHovered, rotationAngle, index, totalCards }: Rin
         >
           阅读更多
           <ArrowRight size={12} className="transition-transform duration-300 group-hover:translate-x-1" />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+interface HorizontalNewsCardProps {
+  news: NewsItem
+  index: number
+  isActive: boolean
+  isHovered: boolean
+}
+
+function HorizontalNewsCard({ news, isActive, isHovered }: HorizontalNewsCardProps) {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  return (
+    <div className={`group w-full bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border transform hover:-translate-y-2 ${
+      isActive 
+        ? 'border-blue-200 shadow-blue-500/20 scale-105' 
+        : isHovered 
+          ? 'border-gray-300 shadow-gray-500/20'
+          : 'border-gray-200'
+    }`}>
+      <div className="relative h-48 overflow-hidden">
+        {news.image ? (
+          <Image
+            src={news.image}
+            alt={news.title}
+            fill
+            className={`object-cover transition-transform duration-500 ${
+              isActive || isHovered ? 'scale-110' : 'scale-100'
+            }`}
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+            <div className={`text-blue-500 font-bold transition-all duration-300 ${
+              isActive ? 'text-4xl' : 'text-3xl'
+            }`}>新闻</div>
+          </div>
+        )}
+        <div className={`absolute inset-0 bg-gradient-to-t from-black/20 to-transparent transition-opacity duration-300 ${
+          isActive || isHovered ? 'opacity-100' : 'opacity-0'
+        }`}></div>
+        
+        {/* 活跃状态指示器 */}
+        {isActive && (
+          <div className="absolute top-3 right-3 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          </div>
+        )}
+      </div>
+      
+      <div className="p-6">
+        <h3 className={`font-bold mb-3 line-clamp-2 transition-colors duration-300 ${
+          isActive 
+            ? 'text-blue-600 text-xl' 
+            : isHovered 
+              ? 'text-gray-900 text-lg'
+              : 'text-gray-800 text-lg'
+        }`}>
+          {news.title}
+        </h3>
+        <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">
+          {news.summary}
+        </p>
+        
+        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+          <div className="flex items-center gap-1">
+            <Calendar size={14} />
+            <span>{formatDate(news.createdAt)}</span>
+          </div>
+          <span className="text-blue-600 font-medium">{news.author}</span>
+        </div>
+        
+        <Link
+          href={`/news/${news.id}`}
+          className={`inline-flex items-center gap-2 font-medium transition-all duration-300 ${
+            isActive 
+              ? 'text-blue-600 hover:text-blue-700' 
+              : 'text-gray-500 hover:text-blue-600'
+          }`}
+        >
+          阅读更多
+          <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
         </Link>
       </div>
     </div>
