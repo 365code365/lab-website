@@ -20,15 +20,62 @@ export default function NewsSection() {
   const [news, setNews] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [rotationAngle, setRotationAngle] = useState(0)
+  const [isAutoRotating, setIsAutoRotating] = useState(true)
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   useEffect(() => {
     fetchNews()
   }, [])
 
+  // 环形3D自动旋转效果
+  useEffect(() => {
+    if (!isAutoRotating || news.length <= 1) return
+
+    const interval = setInterval(() => {
+      setRotationAngle(prev => prev + 0.5) // 每次旋转0.5度，更平滑
+    }, 50) // 每50毫秒更新一次，创造连续旋转效果
+
+    return () => clearInterval(interval)
+  }, [news.length, isAutoRotating])
+
+  // 暂停/恢复旋转
+  const toggleRotation = () => {
+    setIsAutoRotating(!isAutoRotating)
+  }
+
+  // 计算每个卡片的3D位置
+  const getCardTransform = (index: number) => {
+    const totalCards = Math.max(news.length, 3) // 确保至少显示3个
+    const anglePerCard = 360 / totalCards
+    const cardAngle = (index * anglePerCard + rotationAngle) % 360
+    const radius = 300 // 稍微增大环形半径
+    
+    // 计算是否在中间位置（前方）
+    const normalizedAngle = ((cardAngle % 360) + 360) % 360
+    const isCenterFront = normalizedAngle >= 345 || normalizedAngle <= 15 // 中间30度范围
+    
+    // 根据位置计算缩放比例
+    const distanceFromCenter = Math.min(
+      Math.abs(normalizedAngle),
+      Math.abs(normalizedAngle - 360)
+    )
+    const scale = isCenterFront ? 1.2 : Math.max(0.7, 1 - distanceFromCenter / 180 * 0.3)
+    
+    // 计算透明度
+    const opacity = isCenterFront ? 1 : Math.max(0.4, 1 - distanceFromCenter / 180 * 0.6)
+    
+    return {
+      transform: `rotateY(${cardAngle}deg) translateZ(${radius}px) scale(${scale})`,
+      opacity: opacity,
+      zIndex: isCenterFront ? 10 : Math.round((1 - distanceFromCenter / 180) * 5)
+    }
+  }
+
   const fetchNews = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/news?limit=4')
+      const response = await fetch('/api/news?limit=6')
       if (!response.ok) {
         throw new Error('Failed to fetch news')
       }
@@ -93,19 +140,17 @@ export default function NewsSection() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
-            <div className="h-48 bg-gray-200"></div>
-            <div className="p-6">
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </div>
+      <div className="relative h-[500px] flex items-center justify-center">
+        <div className="w-72 bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
+          <div className="h-40 bg-gray-200"></div>
+          <div className="p-4">
+            <div className="h-4 bg-gray-200 rounded mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
+            <div className="h-3 bg-gray-200 rounded mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
           </div>
-        ))}
+        </div>
       </div>
     )
   }
@@ -119,27 +164,114 @@ export default function NewsSection() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {news.map((item, index) => (
-        <NewsCard key={item.id} news={item} index={index} />
-      ))}
+    <div className="relative h-[500px] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+      {/* 环形3D旋转容器 */}
+      <div 
+        className="relative w-full h-full flex items-center justify-center"
+        style={{ perspective: '1200px' }}
+        onMouseEnter={() => setIsAutoRotating(false)}
+        onMouseLeave={() => setIsAutoRotating(true)}
+      >
+        <div 
+          className="relative w-full h-full"
+          style={{
+            transformStyle: 'preserve-3d',
+          }}
+        >
+          {/* 确保至少显示3个新闻，如果新闻不足则重复显示 */}
+          {Array.from({ length: Math.max(news.length, 3) }, (_, index) => {
+            const newsIndex = index % news.length
+            const item = news[newsIndex]
+            const cardStyle = getCardTransform(index)
+            
+            return (
+              <div
+                key={`${item?.id || 'placeholder'}-${index}`}
+                className="absolute w-72 h-80 transition-all duration-500 ease-out"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  marginLeft: '-144px', // w-72 的一半
+                  marginTop: '-160px',  // h-80 的一半
+                  transform: cardStyle.transform,
+                  opacity: cardStyle.opacity,
+                  zIndex: cardStyle.zIndex,
+                  backfaceVisibility: 'hidden'
+                }}
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+              >
+                {item ? (
+                  <RingNewsCard 
+                    news={item} 
+                    index={index} 
+                    isHovered={hoveredIndex === index}
+                    rotationAngle={rotationAngle}
+                    totalCards={Math.max(news.length, 3)}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 rounded-2xl flex items-center justify-center">
+                    <div className="text-gray-400 text-lg">加载中...</div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 旋转控制按钮 */}
+      <button
+        onClick={toggleRotation}
+        className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg flex items-center justify-center text-gray-600 hover:text-blue-600 hover:bg-white hover:shadow-xl transition-all duration-300 group"
+      >
+        <div className={`transition-transform duration-300 ${isAutoRotating ? 'animate-spin' : ''}`}>
+          {isAutoRotating ? '⏸️' : '▶️'}
+        </div>
+      </button>
+
+      {/* 环形指示器 */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
+        <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-lg">
+          {Array.from({ length: Math.max(news.length, 3) }, (_, index) => {
+            const totalCards = Math.max(news.length, 3)
+            const angle = (index * (360 / totalCards) + rotationAngle) % 360
+            const normalizedAngle = ((angle % 360) + 360) % 360
+            const isCenterFront = normalizedAngle >= 345 || normalizedAngle <= 15
+            
+            return (
+              <div
+                key={index}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  isCenterFront
+                    ? 'bg-blue-600 scale-150 shadow-lg'
+                    : 'bg-gray-300'
+                }`}
+              />
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 装饰性背景 */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 -translate-x-1/2 -translate-y-1/2 border border-gray-200/30 rounded-full"></div>
+        <div className="absolute top-1/2 left-1/2 w-80 h-80 -translate-x-1/2 -translate-y-1/2 border border-gray-200/20 rounded-full"></div>
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 -translate-x-1/2 -translate-y-1/2 border border-gray-200/10 rounded-full"></div>
+      </div>
     </div>
   )
 }
 
-interface NewsCardProps {
+interface RingNewsCardProps {
   news: NewsItem
   index: number
+  isHovered: boolean
+  rotationAngle: number
+  totalCards: number
 }
 
-function NewsCard({ news, index }: NewsCardProps) {
-  const [isVisible, setIsVisible] = useState(false)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), index * 100)
-    return () => clearTimeout(timer)
-  }, [index])
-
+function RingNewsCard({ news, isHovered, rotationAngle, index, totalCards }: RingNewsCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('zh-CN', {
@@ -149,35 +281,91 @@ function NewsCard({ news, index }: NewsCardProps) {
     })
   }
 
+  // 计算卡片是否在中间前方位置（用于突出显示）
+  const cardAngle = (index * (360 / totalCards) + rotationAngle) % 360
+  const normalizedAngle = ((cardAngle % 360) + 360) % 360
+  const isCenterFront = normalizedAngle >= 345 || normalizedAngle <= 15 // 中间30度范围
+  
+  // 计算距离中心的程度，用于渐变效果
+  const distanceFromCenter = Math.min(
+    Math.abs(normalizedAngle),
+    Math.abs(normalizedAngle - 360)
+  )
+  const centerProximity = Math.max(0, 1 - distanceFromCenter / 45) // 45度内渐变
+
   return (
-    <div className={`group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 hover:border-blue-200 transform hover:-translate-y-2 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-      <div className="relative h-48 overflow-hidden">
+    <div className={`w-full h-full bg-white rounded-2xl overflow-hidden border transition-all duration-500 ${
+      isCenterFront 
+        ? 'shadow-2xl shadow-blue-500/30 border-blue-300' 
+        : isHovered 
+          ? 'shadow-xl shadow-gray-500/20 border-gray-300'
+          : centerProximity > 0.3
+            ? 'shadow-lg shadow-blue-500/10 border-blue-100'
+            : 'shadow-md border-gray-200'
+    }`}>
+      <div className="relative h-40 overflow-hidden">
         {news.image ? (
           <Image
             src={news.image}
             alt={news.title}
             fill
-            className="object-cover group-hover:scale-110 transition-transform duration-500"
+            className={`object-cover transition-transform duration-500 ${
+              isCenterFront || isHovered ? 'scale-110' : 'scale-100'
+            }`}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-            <div className="text-blue-500 text-4xl font-bold">新闻</div>
+            <div className={`text-blue-500 font-bold transition-all duration-300 ${
+              isCenterFront ? 'text-3xl' : 'text-2xl'
+            }`}>新闻</div>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className={`absolute inset-0 bg-gradient-to-t from-black/40 to-transparent transition-opacity duration-500 ${
+          isCenterFront || isHovered ? 'opacity-100' : 'opacity-60'
+        }`}></div>
+        
+        {/* 中间位置的特殊标识 */}
+        {isCenterFront && (
+          <div className="absolute top-2 right-2 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
+            <div className="w-2 h-2 bg-white rounded-full"></div>
+          </div>
+        )}
+        
+        {/* 接近中心的渐变边框效果 */}
+        {centerProximity > 0.3 && !isCenterFront && (
+          <div 
+            className="absolute inset-0 border-2 border-blue-400/30 rounded-2xl transition-opacity duration-500"
+            style={{ opacity: centerProximity * 0.5 }}
+          ></div>
+        )}
       </div>
       
-      <div className="p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
+      <div className="p-4">
+        <h3 className={`font-bold mb-2 line-clamp-2 transition-all duration-300 ${
+          isCenterFront 
+            ? 'text-blue-600 text-lg' 
+            : isHovered 
+              ? 'text-gray-900 text-base'
+              : centerProximity > 0.5
+                ? 'text-blue-500 text-base'
+                : 'text-gray-800 text-sm'
+        }`}>
           {news.title}
         </h3>
-        <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">
+        
+        <p className={`text-gray-600 leading-relaxed mb-3 transition-all duration-300 ${
+          isCenterFront 
+            ? 'text-sm line-clamp-3' 
+            : 'text-xs line-clamp-2'
+        }`}>
           {news.summary}
         </p>
         
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+        <div className={`flex items-center justify-between text-gray-500 mb-3 transition-all duration-300 ${
+          isCenterFront ? 'text-sm' : 'text-xs'
+        }`}>
           <div className="flex items-center gap-1">
-            <Calendar size={14} />
+            <Calendar size={12} />
             <span>{formatDate(news.createdAt)}</span>
           </div>
           <span className="text-blue-600 font-medium">{news.author}</span>
@@ -185,10 +373,18 @@ function NewsCard({ news, index }: NewsCardProps) {
         
         <Link
           href={`/news/${news.id}`}
-          className="group/link inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
+          className={`inline-flex items-center gap-1 font-medium transition-all duration-300 ${
+            isCenterFront 
+              ? 'text-blue-600 hover:text-blue-700 text-sm' 
+              : isHovered
+                ? 'text-blue-500 hover:text-blue-600 text-sm'
+                : centerProximity > 0.5
+                  ? 'text-blue-400 hover:text-blue-600 text-sm'
+                  : 'text-gray-500 hover:text-blue-600 text-xs'
+          }`}
         >
           阅读更多
-          <ArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform" />
+          <ArrowRight size={12} className="transition-transform duration-300 group-hover:translate-x-1" />
         </Link>
       </div>
     </div>

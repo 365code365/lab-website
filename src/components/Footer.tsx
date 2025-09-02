@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useTranslations, useLocale } from '@/contexts/LocaleContext'
 
 interface FooterLink {
   name: string
@@ -22,6 +23,8 @@ interface FooterConfig {
 }
 
 const Footer = () => {
+  const t = useTranslations('footer')
+  const locale = useLocale()
   const [footerConfig, setFooterConfig] = useState<FooterConfig | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -65,20 +68,19 @@ const Footer = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* 默认课题组信息 */}
             <div className="col-span-1 md:col-span-2">
-              <h3 className="text-lg font-semibold mb-4">智能化药物研发加速器</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('title')}</h3>
               <p className="text-gray-300 mb-4">
-                致力于利用人工智能和计算生物学技术，加速药物发现和开发过程，
-                为人类健康事业贡献力量。
+                {t('description')}
               </p>
               <div className="text-sm text-gray-400">
-                <p>© 2024 智能化药物研发加速器课题组. 保留所有权利.</p>
+                <p>{t('copyright')}</p>
                 <p>备案号: 京ICP备xxxxxxxx号</p>
               </div>
             </div>
 
             {/* 默认联系方式 */}
             <div>
-              <h4 className="text-md font-semibold mb-4">联系方式</h4>
+              <h4 className="text-md font-semibold mb-4">{t('contactInfo')}</h4>
               <div className="text-gray-300 space-y-2">
                 <p>邮箱: contact@lab.edu.cn</p>
                 <p>电话: +86-xxx-xxxx-xxxx</p>
@@ -88,7 +90,7 @@ const Footer = () => {
 
             {/* 默认友情链接 */}
             <div>
-              <h4 className="text-md font-semibold mb-4">相关链接</h4>
+              <h4 className="text-md font-semibold mb-4">{t('relatedLinks')}</h4>
               <div className="space-y-2">
                 <Link 
                   href="https://cran.r-project.org/web/packages/BioMedR/" 
@@ -110,14 +112,14 @@ const Footer = () => {
                   href="/tools" 
                   className="block text-gray-300 hover:text-white transition-colors"
                 >
-                  更多工具
+                  {t('moreTools')}
                 </Link>
               </div>
             </div>
           </div>
 
           <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>Powered by Next.js & Tailwind CSS</p>
+            <p>{t('poweredBy')}</p>
           </div>
         </div>
       </footer>
@@ -142,7 +144,7 @@ const Footer = () => {
 
           {/* 动态联系方式 */}
           <div>
-            <h4 className="text-md font-semibold mb-4">联系方式</h4>
+            <h4 className="text-md font-semibold mb-4">{t('contactInfo')}</h4>
             <div className="text-gray-300 space-y-2">
               {footerConfig.email && <p>邮箱: {footerConfig.email}</p>}
               {footerConfig.phone && <p>电话: {footerConfig.phone}</p>}
@@ -152,7 +154,7 @@ const Footer = () => {
 
           {/* 动态友情链接 */}
           <div>
-            <h4 className="text-md font-semibold mb-4">相关链接</h4>
+            <h4 className="text-md font-semibold mb-4">{t('relatedLinks')}</h4>
             <div className="space-y-2">
               {footerConfig.links && footerConfig.links.length > 0 ? (
                 footerConfig.links.map((link, index) => (
@@ -189,7 +191,7 @@ const Footer = () => {
                     href="/tools" 
                     className="block text-gray-300 hover:text-white transition-colors"
                   >
-                    更多工具
+                    {t('moreTools')}
                   </Link>
                 </>
               )}
@@ -198,7 +200,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-          <p>Powered by Next.js & Tailwind CSS</p>
+          <p>{t('poweredBy')}</p>
         </div>
       </div>
     </footer>

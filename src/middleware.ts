@@ -1,3 +1,4 @@
+import createIntlMiddleware from 'next-intl/middleware';
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -23,6 +24,12 @@ function isSystemInstalled(): boolean {
   return process.env.SYSTEM_INSTALLED === 'true'
 }
 
+// 创建国际化中间件
+const intlMiddleware = createIntlMiddleware({
+  locales: ['en', 'zh'],
+  defaultLocale: 'zh'
+});
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
@@ -37,23 +44,24 @@ export async function middleware(request: NextRequest) {
     
     if (!installed) {
       // 如果未安装且不在安装页面，重定向到安装页面
-      if (pathname !== '/install') {
+      if (!pathname.includes('/install')) {
         const installUrl = new URL('/install', request.url)
         return NextResponse.redirect(installUrl)
       }
     } else {
       // 如果已安装但访问安装页面，重定向到首页
-      if (pathname === '/install') {
+      if (pathname.includes('/install')) {
         const homeUrl = new URL('/', request.url)
         return NextResponse.redirect(homeUrl)
       }
     }
     
-    return NextResponse.next()
+    // 应用国际化中间件
+    return intlMiddleware(request);
   } catch (error) {
     console.error('中间件检查安装状态失败:', error)
     // 发生错误时，允许继续访问
-    return NextResponse.next()
+    return intlMiddleware(request);
   }
 }
 

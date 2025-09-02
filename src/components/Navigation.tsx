@@ -2,21 +2,34 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, Globe } from 'lucide-react'
+import { useTranslations, useLocale } from '@/contexts/LocaleContext'
+import { usePathname, useRouter } from 'next/navigation'
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false)
+  const [langMenuOpen, setLangMenuOpen] = useState(false)
+  const t = useTranslations('navigation')
+  const locale = useLocale()
+  const pathname = usePathname()
+  const router = useRouter()
 
   const navItems = [
-    { name: '首页', href: '/' },
-    { name: '团队成员', href: '/team' },
-    { name: '发表成果', href: '/publications' },
-    { name: '学术文章', href: '/articles' },
-    { name: '程序开发', href: '/tools' },
-    { name: '获奖名单', href: '/awards' },
-    { name: '新闻动态', href: '/news' },
-    { name: '联系我们', href: '/contact' },
+    { name: t('home'), href: '/' },
+    { name: t('team'), href: '/team' },
+    { name: t('publications'), href: '/publications' },
+    { name: t('articles'), href: '/articles' },
+    { name: t('tools'), href: '/tools' },
+    { name: t('awards'), href: '/awards' },
+    { name: t('news'), href: '/news' },
+    { name: t('contact'), href: '/contact' },
   ]
+
+  const switchLanguage = (newLocale: string) => {
+    const currentPath = pathname.replace(`/${locale}`, '') || '/'
+    router.push(`/${newLocale}${currentPath}`)
+    setLangMenuOpen(false)
+  }
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
@@ -26,7 +39,7 @@ const Navigation = () => {
           <div className="absolute left-0 flex items-center">
             <Link href="/" className="flex-shrink-0">
               <h1 className="text-xl font-bold text-blue-600">
-                智能化药物研发加速器
+                {locale === 'en' ? 'Intelligent Drug Discovery Accelerator' : '智能化药物研发加速器'}
               </h1>
             </Link>
           </div>
@@ -46,17 +59,54 @@ const Navigation = () => {
             ))}
           </div>
 
-          {/* Mobile menu button - positioned absolutely to the right */}
-          <div className="absolute right-0 md:hidden flex items-center">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="relative text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 p-2 rounded-lg transition-all duration-300 ease-in-out hover:bg-blue-50 hover:shadow-md transform hover:scale-110 group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-              <div className="relative z-10 transition-transform duration-300 group-hover:rotate-180">
-                {isOpen ? <X size={24} /> : <Menu size={24} />}
-              </div>
-            </button>
+          {/* Language switcher and mobile menu - positioned absolutely to the right */}
+          <div className="absolute right-0 flex items-center space-x-2">
+            {/* Language Switcher */}
+            <div className="relative">
+              <button
+                onClick={() => setLangMenuOpen(!langMenuOpen)}
+                className="relative text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 p-2 rounded-lg transition-all duration-300 ease-in-out hover:bg-blue-50 hover:shadow-md transform hover:scale-110 group flex items-center space-x-1"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                <div className="relative z-10 flex items-center space-x-1">
+                  <Globe size={20} />
+                  <span className="text-sm font-medium">{locale.toUpperCase()}</span>
+                </div>
+              </button>
+              
+              {/* Language dropdown */}
+              {langMenuOpen && (
+                <div className="absolute right-0 mt-2 w-24 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                  <div className="py-1">
+                    <button
+                      onClick={() => switchLanguage('zh')}
+                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${locale === 'zh' ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`}
+                    >
+                      中文
+                    </button>
+                    <button
+                      onClick={() => switchLanguage('en')}
+                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${locale === 'en' ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`}
+                    >
+                      English
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="relative text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 p-2 rounded-lg transition-all duration-300 ease-in-out hover:bg-blue-50 hover:shadow-md transform hover:scale-110 group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                <div className="relative z-10 transition-transform duration-300 group-hover:rotate-180">
+                  {isOpen ? <X size={24} /> : <Menu size={24} />}
+                </div>
+              </button>
+            </div>
           </div>
         </div>
 
